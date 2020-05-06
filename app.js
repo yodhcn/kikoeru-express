@@ -122,7 +122,25 @@ app.use((err, req, res, next) => {
   }
 });
 
+
+// 获取本机IP地址
+const getIPAddress = () => {
+  const interfaces = require('os').networkInterfaces();
+  for(let devName in interfaces){
+    const iface = interfaces[devName];
+    for (let i=0; i<iface.length; i++) {
+      const alias = iface[i];
+      if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+        return alias.address;
+      }
+    }
+  }
+};
+
+const LOCAL_IP = getIPAddress();
+
 // Start server
 server.listen(process.env.PORT || 8888, () => {
-  console.log(`Express listening on http://localhost:${process.env.PORT || 8888}`)
+  console.log(`使用浏览器在本机访问 http://localhost:${process.env.PORT || 8888}`);
+  console.log(`或在局域网访问 http://${LOCAL_IP}:${process.env.PORT || 8888}`);
 });
