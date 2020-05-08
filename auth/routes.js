@@ -201,5 +201,57 @@ router.get('/config', (req, res, next) => {
   }
 });
 
+// 创建一个新用户播放列表
+router.post('/playlist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.createUserPlaylist(username, {
+    username,
+    name: req.body.playlistName,
+    tracks: req.body.tracks
+  })
+    .then(() => res.send({ message: '播放列表创建成功.' }))
+    .catch((err) => {
+      if (err.message.indexOf('已存在') !== -1) {
+        res.status(403).send({ error: err.message });
+      } else {
+        next(err);
+      }
+    });
+});
+
+// 更新用户播放列表
+router.put('/playlist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.updateUserPlaylist(username, req.body.oldpPlaylistName, {
+    username,
+    name: req.body.newPlaylistName,
+    tracks: req.body.tracks
+  })
+    .then(() => res.send({ message: '播放列表更新成功.' }))
+    .catch((err) => {
+      if (err.message.indexOf('不存在') !== -1) {
+        res.status(403).send({ error: err.message });
+      } else {
+        next(err);
+      }
+    });
+});
+
+// 删除用户播放列表
+router.delete('/playlist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.deleteUserPlaylists(username, req.body.playlistNames)
+    .then(() => res.send({ message: '播放列表删除成功.' }))
+    .catch((err) => next(err));
+});
+
+// 查询用户所有的播放列表
+router.get('/playlist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.getUserPlaylists(username)
+    .then((playlists) => res.send({ playlists }))
+    .catch((err) => next(err));
+});
+
 
 module.exports = router;

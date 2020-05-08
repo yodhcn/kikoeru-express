@@ -57,7 +57,14 @@ const createSchema = () => knex.schema
   .createTable('t_favorite', (table) => {
     table.string('user_name').notNullable();
     table.string('name').notNullable();
-    table.text('works').notNullable(); // TEXT 类型 [评价分布明细]
+    table.text('works').notNullable(); // TEXT 类型
+    table.foreign('user_name').references('name').inTable('t_user'); // FOREIGN KEY 外键
+    table.primary(['user_name', 'name']); // PRIMARY KEYprimary 主键
+  })
+  .createTable('t_playlist', (table) => {
+    table.string('user_name').notNullable();
+    table.string('name').notNullable();
+    table.text('tracks').notNullable(); // TEXT 类型
     table.foreign('user_name').references('name').inTable('t_user'); // FOREIGN KEY 外键
     table.primary(['user_name', 'name']); // PRIMARY KEYprimary 主键
   })
@@ -72,19 +79,16 @@ const createSchema = () => knex.schema
     }
   });
 
-  /**
-   * user have playlists = [playlist, ...]
-   * playlist = {
-   *   name,
-   *   files: [{hash, title, path}, ...]
-   * }
-   * 
-   * user have Favorites
-   * Favorite = {
-   *   name,
-   *   works: [{id, title, circle}, ...]
-   * }
-   */
-
-
 module.exports = { createSchema };
+
+/**
+ * work have many user tag
+ * user tag level > tag
+ * 
+ * 首先查询用户的标签
+ * t_custom_tag
+ * user_name name id=hash(name)
+ * 
+ * r_custom_tag_work
+ * custom_tag_id user_id work_id
+ */
