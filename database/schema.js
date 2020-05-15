@@ -54,12 +54,13 @@ const createSchema = () => knex.schema
     table.string('group').notNullable(); // USER ADMIN GAUST
     table.primary(['name']); // PRIMARY KEYprimary 主键
   })
-  .createTable('t_favorite', (table) => {
+  .createTable('t_mylist', (table) => {
+    table.increments(); // id自增列(INTEGER 类型)，会被用作主键 [音声id]
     table.string('user_name').notNullable();
     table.string('name').notNullable();
     table.text('works').notNullable(); // TEXT 类型
     table.foreign('user_name').references('name').inTable('t_user'); // FOREIGN KEY 外键
-    table.primary(['user_name', 'name']); // PRIMARY KEYprimary 主键
+    // table.primary(['user_name', 'name']); // PRIMARY KEYprimary 主键
   })
   .createTable('t_playlist', (table) => {
     table.string('user_name').notNullable();

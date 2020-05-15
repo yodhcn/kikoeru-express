@@ -411,70 +411,62 @@ const deleteUser = users => knex.transaction(trx => trx('t_user')
 
 
 /**
- * 创建一个新用户收藏夹
+ * 创建一个新用户收藏列表
  * @param {String} username
- * @param {Object} favorite User Favorite object.
+ * @param {Object} mylist User Mylist object.
  */
-const createUserFavorite = (username, favorite) => knex.transaction(trx => trx('t_favorite')
-  .where('name', '=', favorite.name)
-  .andWhere('user_name', '=', username)
-  .first()
-  .then((res) => {
-    if (res) {
-      throw new Error(`用户 ${username} 的收藏夹 ${favorite.name} 已存在.`);
-    }
-    return trx('t_favorite')
-      .insert({
-        user_name: username,
-        name: favorite.name,
-        works: JSON.stringify(favorite.works)
-      });
-  }));
+const createUserMylist = (username, mylist) => knex.transaction(trx => 
+  trx('t_mylist')
+    .insert({
+      user_name: username,
+      name: mylist.name,
+      works: JSON.stringify(mylist.works)
+    }));
 
 /**
- * 更新用户收藏夹
+ * 更新用户收藏列表
  * @param {String} username
- * @param {String} oldFavoriteName
- * @param {Object} newFavorite User favorite object.
+ * @param {Object} newMylist User mylist object.
  */
-const updateUserFavorite = (username, oldFavoriteName, newFavorite) => knex.transaction(trx => trx('t_favorite')
-  .where('name', '=', oldFavoriteName)
+const updateUserMylist = (username, newMylist) => knex.transaction(trx => trx('t_mylist')
+  .where('id', '=', newMylist.id)
   .andWhere('user_name', '=', username)
   .first()
   .then((res) => {
     if (!res) {
-      throw new Error(`用户 ${username} 的收藏夹 ${oldFavoriteName} 不存在.`);
+      throw new Error(`用户 ${username} 的收藏列表 ${mylistId} 不存在.`);
     }
-    return trx('t_favorite')
-      .where('name', '=', oldFavoriteName)
-      .andWhere('user_name', '=', username)
+    return trx('t_mylist')
+      .where('id', '=', newMylist.id)
       .update({
-        name: newFavorite.name,
-        works: JSON.stringify(newFavorite.works)
+        name: newMylist.name,
+        works: JSON.stringify(newMylist.works)
       });
   }));
 
 /**
- * 删除用户收藏夹
+ * 删除用户收藏列表
  * @param {String} username
- * @param {Array} favoriteNames
+ * @param {Array} mylistNames
  */
-const deleteUserFavorites = (username, favoriteNames) => knex.transaction(trx => trx('t_favorite')
+const deleteUserMylists = (username, mylistIds) => knex.transaction(trx => trx('t_mylist')
   .where('user_name', '=', username)
-  .andWhere('name', 'in', favoriteNames)
+  .andWhere('id', 'in', mylistIds)
   .del());
 
 /**
- * 查询用户所有的收藏夹
+ * 查询用户所有的收藏列表
  * @param {String} username 
  */
-const getUserFavorites = username => knex('t_favorite')
-  .select('name', 'works')
+const getUserMylists = username => knex('t_mylist')
+  .select('id', 'name', 'works')
   .where('user_name', '=', username)
-  .then(favorites => favorites.map((favorite) => {
-    favorite.works = JSON.parse(favorite.works);
-    return favorite;
-  }));
+  .then(mylists => {
+    return mylists.map((mylist) => {
+      mylist.works = JSON.parse(mylist.works);
+      return mylist;
+    })
+  });
 
 
 /**
@@ -485,7 +477,7 @@ const getUserFavorites = username => knex('t_favorite')
 const createUserPlaylist = (username, playlist) => knex.transaction(trx => trx('t_playlist')
   .where('name', '=', playlist.name)
   .andWhere('user_name', '=', username)
-  .first()
+  // .first()
   .then((res) => {
     if (res) {
       throw new Error(`用户 ${username} 的播放列表 ${playlist.name} 已存在.`);
@@ -547,6 +539,30 @@ const getUserPlaylists = username => knex('t_playlist')
 module.exports = {
   knex, insertWorkMetadata, getWorkMetadata, removeWork, getWorksBy, getWorksByKeyWord, updateWorkMetadata, getLabels,
   createUser, updateUserPassword, resetUserPassword, deleteUser,
-  createUserFavorite, updateUserFavorite, deleteUserFavorites, getUserFavorites,
+  createUserMylist, updateUserMylist, deleteUserMylists, getUserMylists,
   createUserPlaylist, updateUserPlaylist, deleteUserPlaylists, getUserPlaylists
 };
+
+createUserMylist('admin', {
+  name: 'h00 0fff 000fg',
+  works: [
+    {
+      id: 267610,
+      title: 'Hな小悪魔と初めてのヒプノシスプレイ',
+      circle: {
+        name: 'RadioERO',
+        id: 123232
+      }
+    },
+    {
+      id: 260230,
+      title: 'お菓子みたいな甘ぁ～い催眠はいかがですか',
+      circle: {
+        name: 'Transparent Chorion',
+        id: 122666
+      }
+    }
+  ]
+}).then((res) => {
+  console.log(res)
+})

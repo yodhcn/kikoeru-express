@@ -222,7 +222,7 @@ router.post('/playlist', (req, res, next) => {
 // 更新用户播放列表
 router.put('/playlist', (req, res, next) => {
   const username = config.auth ? req.user.name : 'admin';
-  db.updateUserPlaylist(username, req.body.oldpPlaylistName, {
+  db.updateUserPlaylist(username, req.body.oldPlaylistName, {
     username,
     name: req.body.newPlaylistName,
     tracks: req.body.tracks
@@ -253,5 +253,58 @@ router.get('/playlist', (req, res, next) => {
     .catch((err) => next(err));
 });
 
+// 创建一个新用户收藏列表
+router.post('/mylist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.createUserMylist(username, {
+    username,
+    name: req.body.mylistName,
+    works: req.body.works
+  })
+    .then(() => res.send({ message: '收藏列表创建成功.' }))
+    .catch((err) => {
+      if (err.message.indexOf('已存在') !== -1) {
+        res.status(403).send({ error: err.message });
+      } else {
+        next(err);
+      }
+    });
+});
+
+// 更新用户收藏列表
+router.put('/mylist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.updateUserMylist(username, {
+    id: req.body.id,
+    name: req.body.name,
+    works: req.body.works
+  })
+    .then(() => res.send({ message: '收藏列表更新成功.' }))
+    .catch((err) => {
+      if (err.message.indexOf('不存在') !== -1) {
+        res.status(403).send({ error: err.message });
+      } else {
+        next(err);
+      }
+    });
+});
+
+// 删除用户收藏列表
+router.delete('/mylist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.deleteUserMylists(username, req.body.mylistIds)
+    .then(() => res.send({ message: '收藏列表删除成功.' }))
+    .catch((err) => next(err));
+});
+
+// 查询用户所有的收藏列表
+router.get('/mylist', (req, res, next) => {
+  const username = config.auth ? req.user.name : 'admin';
+  db.getUserMylists(username)
+    .then((mylists) => {
+      res.send({ mylists })
+    })
+    .catch((err) => next(err));
+});
 
 module.exports = router;
