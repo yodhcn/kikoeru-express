@@ -1,4 +1,4 @@
-const { knex } = require('./db');
+const knex = require('./connect');
 
 // 数据库结构
 const createSchema = () => knex.schema
