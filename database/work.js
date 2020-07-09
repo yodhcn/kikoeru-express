@@ -174,7 +174,7 @@ const getWorkSimpleMetadata = async id => {
 };
 
 /**
- * 在删除音声及其关联后，检查音声的"社团"、"系列、"标签"和"声优"是否仍在被其它音声引用；
+ * 检查音声的"社团"、"系列、"标签"和"声优"是否仍在被其它音声引用；
  * 如果已经不再被引用，将其记录从数据库中移除
  * @param {Function} trx knex 事务函数
  * @param {Number} circleId 社团 id
@@ -183,7 +183,7 @@ const getWorkSimpleMetadata = async id => {
  * @param {Array} userTags 用户标签对象数组
  * @param {Array} vas 声优对象数组
  */
-const cleanupOrphans = async (trx, circleId, seriesId, vas, userTags, dlsiteTags) => {
+const cleanupOrphans = (trx, circleId, seriesId, vas, userTags, dlsiteTags) => {
   const getCount = (tableName, colName, colValue) => trx(tableName)
     .where(colName, '=', colValue)
     .count()
@@ -197,59 +197,59 @@ const cleanupOrphans = async (trx, circleId, seriesId, vas, userTags, dlsiteTags
 
   promises.push(
     getCount('t_work', 'circle_id', circleId)
-      .then((count) => {
+      .then(count => {
         if (count === 0) {
-          trx('t_circle').del().where('id', '=', circleId);
+          return trx('t_circle').del().where('id', '=', circleId);
         }
       })
   );
-  
+
   if (seriesId) {
     promises.push(
       getCount('t_work', 'series_id', seriesId)
-        .then((count) => {
-          if (count === 0) {
-            trx('t_series').del().where('id', '=', seriesId);
-          }
+        .then(count => {
+          return trx('t_series').del().where('id', '=', seriesId);
         })
     );
   }
 
-  for (let i=0; i<vas.length; i++) {
-    const va = vas[i];
-    const count = await getCount('t_va_t_work_relation', 'va_id', va.id);
+  vas.forEach(va => {
+    promises.push(
+      getCount('t_va_t_work_relation', 'va_id', va.id)
+        .then(count => {
+          if(count === 0) {
+            return trx('t_va').delete().where('id', '=', va.id)
+          }
+        })
+    );
+  });
+  
+  userTags.forEach(tag => {
+    promises.push(
+      getCount('t_user_t_user_tag_t_work_relation', 'tag_id', tag.id)
+        .then(count => {
+          if (count === 0) {
+            return trx('t_user_tag').delete().where('id', '=', tag.id);
+          }
+        })
+    );
+  });
 
-    if (count === 0) {
-      promises.push(
-        trx('t_va').delete().where('id', '=', va.id)
-      );
-    }
-  }
+  dlsiteTags.forEach(tag => {
+    promises.push(
+      Promise.all([
+        getCount('t_dlsite_tag_t_work_relation', 'tag_id', tag.id),
+        getCount('t_user_t_dlsite_tag_t_work_relation', 'tag_id', tag.id)
+      ])
+        .then(res => {
+          if (res[0] === 0 && res[1] === 0) {
+            return trx('t_dlsite_tag').delete().where('id', '=', tag.id);
+          }
+        })
+    );
+  });
 
-  for (let i=0; i<userTags.length; i++) {
-    const tag = userTags[i];
-    const count = await getCount('t_user_t_user_tag_t_work_relation', 'tag_id', tag.id);
-
-    if (count === 0) {
-      promises.push(
-        trx('t_user_tag').delete().where('id', '=', tag.id)
-      );
-    }
-  }
-
-  for (let i=0; i<dlsiteTags.length; i++) {
-    const tag = dlsiteTags[i];
-    const originalCount = await getCount('t_dlsite_tag_t_work_relation', 'tag_id', tag.id);
-    const customCount = await getCount('t_user_t_dlsite_tag_t_work_relation', 'tag_id', tag.id);
-
-    if (originalCount === 0 && customCount === 0) {
-      promises.push(
-        trx('t_dlsite_tag').delete().where('id', '=', tag.id)
-      );
-    }
-  }
-
-  await Promise.all(promises);
+  return Promise.all(promises);
 };
 
 /**
