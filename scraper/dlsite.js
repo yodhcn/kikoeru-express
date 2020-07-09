@@ -3,9 +3,6 @@ const cheerio = require('cheerio'); // 解析器
 const axios = require('./axios'); // 数据请求
 const { hashNameIntoInt, hasLetter } = require('./utils');
 const scrapeWorkMetadataFromHVDB = require('./hvdb');
-const { getDLSiteTags } = require('../filesystem/utils');
-
-let ALL_DLSITE_TAGS = null;
 
 /**
  * Scrapes static work metadata from public DLsite page HTML.
@@ -46,14 +43,6 @@ const scrapeWorkStaticMetadata = async (id, language) => {
       WORK_FORMAT = '作品类型';
   }
 
-  if (!ALL_DLSITE_TAGS) {
-    try {
-      ALL_DLSITE_TAGS = await getDLSiteTags();
-    } catch (err) {
-      throw err
-    }
-  }
-
   // 请求网页
   let res = null;
   try {
@@ -70,7 +59,7 @@ const scrapeWorkStaticMetadata = async (id, language) => {
     }
   }
 
-  // 解析
+  // 解析 html
   const work = {
     id,
     title: null,
@@ -90,27 +79,44 @@ const scrapeWorkStaticMetadata = async (id, language) => {
       .filter(function() {
         return $(this).text() === WORK_FORMAT;
       }).parent().children('td');
+   
     const workFormatText = workFormatElement.text();
     if (workFormatText) {
       switch(language) {
         case 'ja-jp':
-          if (workFormatText !== 'ボイス・ASMR') {
+          if (workFormatText.indexOf('ボイス・ASMR') === -1) {
             throw new Error(`[RJ${rjcode}] 不是音声类型的作品.`);
           }
           break;
         case 'zh-tw':
-          if (workFormatText !== '聲音作品・ASMR') {
+          if (workFormatText.indexOf('聲音作品・ASMR') === -1) {
             throw new Error(`[RJ${rjcode}] 不是音声类型的作品.`);
           }
           break;
         default:
-          if (workFormatText !== '音声・ASMR') {
+          if (workFormatText.indexOf('音声・ASMR') === -1) {
             throw new Error(`[RJ${rjcode}] 不是音声类型的作品.`);
           }
       }
     } else {
       throw new Error('解析[作品类型]失败.');
     }
+
+    // // 作品类型
+    // const workFormatElements = $('#work_outline').children('tbody').children('tr').children('th')
+    //   .filter(function() {
+    //     return $(this).text() === WORK_FORMAT;
+    //   }).parent().children('td').children('div').children('a');
+    // if (!workFormatElements.length) {
+    //   throw new Error('解析[作品类型]失败.');
+    // }
+    // const SOUElement = workFormatElements.filter(function() {
+    //   const tagUrl = $(this).attr('href');
+    //   return tagUrl && tagUrl.indexOf('SOU') !== -1;
+    // });
+    // if (SOUElement.length === 0) {
+    //   throw new Error(`[RJ${rjcode}] 不是音声类型的作品.`);
+    // }
 
     // 标题
     const titleElement = $(`a[href="${url}"]`);
@@ -141,45 +147,35 @@ const scrapeWorkStaticMetadata = async (id, language) => {
         return $(this).text() === AGE_RATINGS;
       }).parent().children('td');
     const ageRatingsText = ageRatingsElement.text();
-    if (ageRatingsText) {
-      switch(language) {
-        case 'ja-jp':
-          switch(ageRatingsText) {
-            case '全年齢':
-              work.age_ratings = 'G'
-              break;
-            case 'R-15':
-              work.age_ratings = 'R15'
-              break;
-            default:
-              work.age_ratings = 'R18'
-          }
-          break;
-        case 'zh-tw':
-          switch(ageRatingsText) {
-            case '全年齢':
-              work.age_ratings = 'G'
-              break;
-            case 'R-15':
-              work.age_ratings = 'R15'
-              break;
-            default:
-              work.age_ratings = 'R18'
-          }
-          break;
-        default:
-          switch(ageRatingsText) {
-            case '全年龄':
-              work.age_ratings = 'G'
-              break;
-            case 'R-15':
-              work.age_ratings = 'R15'
-              break;
-            default:
-              work.age_ratings = 'R18'
-          }   
-      }
-    } else {
+    switch(language) {
+      case 'ja-jp':
+        if (ageRatingsText.indexOf('全年齢') !== -1) {
+          work.age_ratings = 'G'
+        } else if (ageRatingsText.indexOf('R-15') !== -1) {
+          work.age_ratings = 'R15'
+        } else if (ageRatingsText.indexOf('18禁') !== -1) {
+          work.age_ratings = 'R18'
+        }
+        break;
+      case 'zh-tw':
+        if (ageRatingsText.indexOf('全年齢') !== -1) {
+          work.age_ratings = 'G'
+        } else if (ageRatingsText.indexOf('R-15') !== -1) {
+          work.age_ratings = 'R15'
+        } else if (ageRatingsText.indexOf('18禁') !== -1) {
+          work.age_ratings = 'R18'
+        }
+        break;
+      default:
+        if (ageRatingsText.indexOf('全年龄') !== -1) {
+          work.age_ratings = 'G'
+        } else if (ageRatingsText.indexOf('R-15') !== -1) {
+          work.age_ratings = 'R15'
+        } else if (ageRatingsText.indexOf('18禁') !== -1) {
+          work.age_ratings = 'R18'
+        }
+    }
+    if (!work.age_ratings) {
       throw new Error('解析[年龄指定]失败.');
     }
     
@@ -219,9 +215,12 @@ const scrapeWorkStaticMetadata = async (id, language) => {
     tagElements.each(function() {
       const tagUrl = $(this).attr('href');
       const tagId = tagUrl && tagUrl.match(/genre\/(\d{3})/) && parseInt(tagUrl.match(/genre\/(\d{3})/)[1]);
-
-      if (tagId && ALL_DLSITE_TAGS[tagId]) {
-        work.tags.push(ALL_DLSITE_TAGS[tagId]);
+      const tagName = $(this).text()
+      if (tagId && tagName) {
+        work.tags.push({
+          id: tagId,
+          name: tagName
+        });
       }
     });
     
@@ -301,13 +300,18 @@ const scrapeWorkDynamicMetadata = async id => {
  * @param {number} id Work id.
  * @param {String} language 标签语言，'ja-jp', 'zh-tw' or 'zh-cn'，默认'zh-cn'
  */
-const scrapeWorkMetadata = (id, language) => Promise.all([
-  scrapeWorkStaticMetadata(id, language),
-  scrapeWorkDynamicMetadata(id)
-])
-  .then(res => Object.assign(res[0], res[1]));
+const scrapeWorkMetadata = (id, language) => {
+  return Promise.all([
+    scrapeWorkStaticMetadata(id, language),
+    scrapeWorkDynamicMetadata(id)
+  ])
+    .then(res => Object.assign(res[0], res[1]))
+};
 
-
+/**
+ * 爬取 dlsite 的全部标签
+ * @param {String} language 标签语言，'ja-jp', 'zh-tw' or 'zh-cn'，默认'zh-cn'
+ */
 const scrapeAllTags = async language => {
   const url = 'https://www.dlsite.com/maniax/fs';
   
@@ -339,7 +343,7 @@ const scrapeAllTags = async language => {
     }
   }
 
-  // 解析
+  // 解析 html
   const tags = {};
   try {
     const $ = cheerio.load(res.data);
