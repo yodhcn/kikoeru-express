@@ -83,7 +83,7 @@ const addMylistWork = (username, mylistId, workid) => knex.transaction(async trx
   }
 
   const works = JSON.parse(mylistRes.works);
-  const index = _.findIndex(works, work => work === workid);
+  const index = works.findIndex(work => work === workid);
 
   if (index !== -1) {
     throw new Error('不允许在收藏列表中添加重复的音声.');
@@ -129,7 +129,7 @@ const deleteMylistWork = (username, mylistId, workid) => knex.transaction(async 
   }
 
   const works = JSON.parse(mylistRes.works);
-  const index = _.findIndex(works, work => work === workid);
+  const index = works.findIndex(work => work === workid);
 
   if (index === -1) {
     throw new Error(`在 id 为 ${mylistId} 的收藏列表中, 不存在 id 为 ${workid} 的音声.`);
