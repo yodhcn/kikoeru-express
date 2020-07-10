@@ -27,6 +27,7 @@ const createSchema = () => knex.schema
     table.integer('price').notNullable(); // INTEGER 类型 [价格]
     table.integer('review_count').notNullable(); // INTEGER 类型 [评论数量]
     table.integer('rate_count').notNullable(); // INTEGER 类型 [评价数量]
+    table.integer('rate_average').notNullable(); // INTEGER 类型 [平均评价]
     table.float('rate_average_2dp').notNullable(); // FLOAT 类型 [平均评价]
     table.text('rate_count_detail').notNullable(); // TEXT 类型 [评价分布明细]
     table.text('rank'); // TEXT 类型 [历史销售成绩]
@@ -50,7 +51,6 @@ const createSchema = () => knex.schema
     table.increments(); // id自增列(INTEGER 类型)，会被用作主键 [标签id]
     table.string('name').notNullable(); // VARCHAR 类型 [标签名称]
     table.string('category').notNullable(); // VARCHAR 类型 [标签类别]
-    // table.integer('work_count').notNullable(); // INTEGER 类型 [标签引用次数]
   })
   .createTable('t_dlsite_tag_t_work_relation', (table) => {
     table.integer('tag_id').notNullable();

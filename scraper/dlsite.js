@@ -285,6 +285,7 @@ const scrapeWorkDynamicMetadata = async id => {
   const work = {
     price: data.price, // 价格
     dl_count: data.dl_count, // 售出数
+    rate_average: data.rate_average, // 平均评价
     rate_average_2dp: data.rate_average_2dp, // 平均评价
     rate_count: data.rate_count, // 评价数量
     rate_count_detail: data.rate_count_detail, // 评价分布明细

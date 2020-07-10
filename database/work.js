@@ -1,4 +1,6 @@
+const moment = require('moment');
 const knex = require('./connect');
+const { andWhere } = require('./connect');
 
 /**
  * 将音声的元数据插入到数据库
@@ -36,6 +38,7 @@ const insertWorkMetadata = work => knex.transaction(async trx => {
       price: work.price,
       review_count: work.review_count,
       rate_count: work.rate_count,
+      rate_average: work.rate_average,
       rate_average_2dp: work.rate_average_2dp,
       rate_count_detail: JSON.stringify(work.rate_count_detail),
       rank: work.rank.length ? JSON.stringify(work.rank) : null
@@ -186,9 +189,9 @@ const getWorkSimpleMetadata = async id => {
 const cleanupOrphans = (trx, circleId, seriesId, vas, userTags, dlsiteTags) => {
   const getCount = (tableName, colName, colValue) => trx(tableName)
     .where(colName, '=', colValue)
-    .count()
+    .count('* as count')
     .first()
-    .then(res => res['count(*)'])
+    .then(res => res.count)
     .catch(err => {
       throw new Error(`在统计表 ${tableName} 中满足条件 (where ${colName} = ${colValue}) 的记录数时出现错误: ${err}`);
     });
@@ -419,7 +422,11 @@ const getWorksByDlsiteTag = (username, tagId) => {
  * @param {String} keyword 关键字
  */
 const getWorksByKeyWord = (username, keyword) => {
-  const trimedKeyword = keyword.trim();
+  if (!keyword) {
+    return knex('t_work')
+      .select('id');
+  }
+
   const workid = keyword.match(/RJ(\d{6})/) ? keyword.match(/RJ(\d{6})/)[1] : null;
   if (workid) {
     return knex('t_work')
@@ -427,13 +434,13 @@ const getWorksByKeyWord = (username, keyword) => {
       .where('id', '=', workid);
   }
 
-  const circleIdQuery = knex('t_circle').select('id').where('name', 'like', `%${trimedKeyword}%`);
-  const seriesIdQuery = knex('t_series').select('id').where('name', 'like', `%${trimedKeyword}%`);
+  const circleIdQuery = knex('t_circle').select('id').where('name', 'like', `%${keyword}%`);
+  const seriesIdQuery = knex('t_series').select('id').where('name', 'like', `%${keyword}%`);
   
   const editedWorkIdQuery = knex('t_user_t_dlsite_tag_t_work_relation').distinct('work_id').where('user_name', '=', username);
-  const dlsiteTagIdQuery = knex('t_dlsite_tag').select('id').where('name', 'like', `%${trimedKeyword}%`);
-  const userTagIdQuery = knex('t_user_tag').select('id').where('name', 'like', `%${trimedKeyword}%`);
-  const vaIdQuery = knex('t_va').select('id').where('name', 'like', `%${trimedKeyword}%`);
+  const dlsiteTagIdQuery = knex('t_dlsite_tag').select('id').where('name', 'like', `%${keyword}%`);
+  const userTagIdQuery = knex('t_user_tag').select('id').where('name', 'like', `%${keyword}%`);
+  const vaIdQuery = knex('t_va').select('id').where('name', 'like', `%${keyword}%`);
 
   const workIdQuery = knex('t_va_t_work_relation').select('work_id').where('va_id', 'in', vaIdQuery).union([
     knex('t_user_t_user_tag_t_work_relation').select('work_id').where('tag_id', 'in', userTagIdQuery).andWhere('user_name', '=', username),
@@ -443,10 +450,12 @@ const getWorksByKeyWord = (username, keyword) => {
 
   return knex('t_work')
     .select('id')
-    .where('title', 'like', `%${keyword}%`)
-    .orWhere('circle_id', 'in', circleIdQuery)
-    .orWhere('series_id', 'in', seriesIdQuery)
-    .orWhere('id', 'in', workIdQuery);
+    .where(builder =>
+      builder.where('title', 'like', `%${keyword}%`)
+        .orWhere('circle_id', 'in', circleIdQuery)
+        .orWhere('series_id', 'in', seriesIdQuery)
+        .orWhere('id', 'in', workIdQuery)
+    );
 };
 
 /**
@@ -454,50 +463,86 @@ const getWorksByKeyWord = (username, keyword) => {
  * @param {String} username 用户名
  * @param {String} field ['circle', 'series', 'va', 'dlsiteTag', 'userTag'] 中的一个
  */
-const getLabels = async (username, field) => {
-  if (field === 'circle' || field === 'series') {
-    return knex('t_work')
-      .join(`t_${field}`, `${field}_id`, '=', `t_${field}.id`)
-      .select(`t_${field}.id`, 'name')
-      .groupBy(`${field}_id`)
-      .count('* as count');
-  } else if (field === 'va') {
-    return knex('t_va_t_work_relation')
-      .join('t_va', 'va_id', '=', 'id')
-      .select('t_va.id', 'name')
-      .groupBy('va_id')
-      .count('* as count');
-  } else if (field === 'dlsiteTag') {
-    const editedWorkIdQuery = knex('t_user_t_dlsite_tag_t_work_relation')
-      .distinct('work_id')
-      .where('user_name', '=', username);
+const getLabels = (username, field) => {
+  switch (field) {
+    case 'circle': case 'series':
+      return knex('t_work')
+        .join(`t_${field}`, `${field}_id`, '=', `t_${field}.id`)
+        .select(`t_${field}.id`, 'name')
+        .groupBy(`${field}_id`)
+        .count('* as count')
+        .orderBy('name', 'asc');
+    case 'va':
+      return knex('t_va_t_work_relation')
+        .join('t_va', 'va_id', '=', 't_va.id')
+        .select('t_va.id', 'name')
+        .groupBy('va_id')
+        .count('* as count')
+        .orderBy('name', 'asc');
+    case 'dlsite_tag':
+      const editedWorkIdQuery = knex('t_user_t_dlsite_tag_t_work_relation')
+        .distinct('work_id')
+        .where('user_name', '=', username);
 
-    const queryString = 
-      knex.unionAll([
-        knex('t_user_t_dlsite_tag_t_work_relation')
-          .join('t_dlsite_tag', 'tag_id', '=', 'id')
-          .select('id', 'name')
-          .where('user_name', '=', username),
-          
-        knex('t_dlsite_tag_t_work_relation')
-          .join('t_dlsite_tag', 'tag_id', '=', 'id')
-          .select('id', 'name')
-          .where('work_id', 'not in', editedWorkIdQuery)
-      ]).toString();
+      const queryString = 
+        knex.unionAll([
+          knex('t_user_t_dlsite_tag_t_work_relation')
+            .join('t_dlsite_tag', 'tag_id', '=', 't_dlsite_tag.id')
+            .select('t_dlsite_tag.id', 'name', `category`)
+            .where('user_name', '=', username),
+            
+          knex('t_dlsite_tag_t_work_relation')
+            .join('t_dlsite_tag', 'tag_id', '=', 't_dlsite_tag.id')
+            .select('t_dlsite_tag.id', 'name', `category`)
+            .where('work_id', 'not in', editedWorkIdQuery)
+        ]).toString();
 
-    return knex.raw('select `id`, `name`, count(*) as count from (' + queryString + ')' + 'group by `id`');
-  } else if (field === 'userTag') {
-    return knex('t_user_t_user_tag_t_work_relation')
-      .join('t_user_tag', 'tag_id', '=', 'id')
-      .select('id', 'name', 'created_by')
-      .where('user_name', '=', username)
-      .groupBy('tag_id')
-      .count('* as count');
+      return knex.raw('select `id`, `name`, `category`, count(*) as count from (' + queryString + ')' + 'group by `id` order by `name` asc');
+    case 'user_tag':
+      return knex('t_user_t_user_tag_t_work_relation')
+        .join('t_user_tag', 'tag_id', '=', 't_user_tag.id')
+        .select('t_user_tag.id', 'name', 'created_by')
+        .where('user_name', '=', username)
+        .groupBy('tag_id')
+        .count('* as count')
+        .orderBy('name', 'asc');
   }
+};
+
+const worksFilter = (workQuery, releaseTerm, ageCategory) => {
+  // 发售开始日期	
+  if (releaseTerm) {
+    let registDateStart, registDateEnd;
+    switch (releaseTerm) {
+      case 'week': // 一周以内
+        registDateStart = moment(Date.now()).subtract(7, 'days').format('YYYY-MM-DD');
+        workQuery.andWhere('release', '>=', registDateStart);
+        break;
+      case 'month': // 一个月以内
+        registDateStart = moment(Date.now()).subtract(1, 'months').format('YYYY-MM-DD');
+        workQuery.andWhere('release', '>=', registDateStart);
+        break;
+      case 'year': // 一年以内
+        registDateStart = moment(Date.now()).subtract(1, 'years').format('YYYY-MM-DD');
+        workQuery.andWhere('release', '>=', registDateStart);
+        break;
+      case 'old': // 更以前
+        registDateEnd = moment(Date.now()).subtract(1, 'years').subtract(1, 'days').format('YYYY-MM-DD');
+        workQuery.andWhere('release', '<=', 'registDateEnd');
+        break;
+    }
+  }
+
+  // 年龄指定
+  if (ageCategory) {
+    workQuery.andWhere('age_ratings', '=', ageCategory);
+  }
+
+  return workQuery;
 };
 
 
 module.exports = {
   insertWorkMetadata, updateWorkMetadata, removeWork, getWorkMetadata, getWorkSimpleMetadata,
-  getWorksBy, getWorksByUserTag, getWorksByDlsiteTag, getWorksByKeyWord, getLabels
+  getWorksBy, getWorksByUserTag, getWorksByDlsiteTag, getWorksByKeyWord, worksFilter, getLabels
 };
