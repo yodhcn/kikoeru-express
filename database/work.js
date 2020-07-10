@@ -1,6 +1,5 @@
 const moment = require('moment');
 const knex = require('./connect');
-const { andWhere } = require('./connect');
 
 /**
  * 将音声的元数据插入到数据库
