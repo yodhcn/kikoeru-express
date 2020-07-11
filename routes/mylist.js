@@ -1,3 +1,4 @@
+const { check, validationResult } = require('express-validator'); // 后端校验
 const express = require('express');
 const db = require('../database');
 const { getConfig } = require('../config');
@@ -5,20 +6,37 @@ const { getConfig } = require('../config');
 const config = getConfig();
 const router = express.Router();
 
-router.post('/mylist/update_mylist', async (req, res, next) => {
+router.post('/mylist/update_mylist', [
+  check('type')
+    .custom(value => {
+      if (['create', 'delete', 'rename'].indexOf(value) === -1) {
+        throw new Error("type 必须为 ['create', 'delete', 'rename'] 中的一个.");
+      }
+      return true
+    })
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
   const username = config.auth ? req.user.name : 'admin';
   const type = req.body.type;
 
   try {
-    if (type === 'create') {
-      const mylistId = await db.mylist.createMylist(username, req.body.mylist_name);
-      res.send({ result: true, mylist_id: mylistId });
-    } else if (type === 'delete') {
-      await db.mylist.deleteMylist(username, req.body.mylist_id);
-      res.send({ result: true });
-    } else if (type === 'rename') {
-      await db.mylist.renameMylist(username, req.body.mylist_id, req.body.mylist_name);
-      res.send({ result: true });
+    switch (type) {
+      case 'create':
+        const mylistId = await db.mylist.createMylist(username, req.body.mylist_name);
+        res.send({ result: true, mylist_id: mylistId });
+        break;
+      case 'delete':
+        await db.mylist.deleteMylist(username, req.body.mylist_id);
+        res.send({ result: true });
+        break;
+      case 'rename':
+        await db.mylist.renameMylist(username, req.body.mylist_id, req.body.mylist_name);
+        res.send({ result: true });
+        break;
     }
   } catch (err) {
     if (err.message.indexOf('不存在') !== -1) {
@@ -31,17 +49,34 @@ router.post('/mylist/update_mylist', async (req, res, next) => {
   }
 });
 
-router.post('/mylist/update_mylist_work', async (req, res, next) => {
+router.post('/mylist/update_mylist_work', [
+  check('type')
+    .custom(value => {
+      if (['add', 'delete', 'order'].indexOf(value) === -1) {
+        throw new Error("type 必须为 ['add', 'delete', 'order'] 中的一个.");
+      }
+      return true
+    })
+], async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+
   const username = config.auth ? req.user.name : 'admin';
   const type = req.body.type;
 
   try {
-    if (type === 'add') {
-      await db.mylist.addMylistWork(username, req.body.mylist_id, req.body.mylist_work_id);
-    } else if (type === 'delete') {
-      await db.mylist.deleteMylistWork(username, req.body.mylist_id, req.body.mylist_work_id);
-    } else if (type === 'order') {
-      await db.mylist.orderMylistWork(username, req.body.mylist_id, req.body.works);
+    switch (type) {
+      case 'add':
+        await db.mylist.addMylistWork(username, req.body.mylist_id, req.body.mylist_work_id);
+        break;
+      case 'delete':
+        await db.mylist.deleteMylistWork(username, req.body.mylist_id, req.body.mylist_work_id);
+        break;
+      case 'order':
+        await db.mylist.orderMylistWork(username, req.body.mylist_id, req.body.works);
+        break;
     }
 
     res.send({ result: true });
