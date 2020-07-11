@@ -24,19 +24,17 @@ const createUser = user => knex.transaction(async trx => {
 /**
  * 更新用户密码
  * @param {String} username 用户名
- * @param {String} oldPassword 旧密码
  * @param {String} newPassword 新密码
  */
-const updateUserPassword = (username, oldPassword, newPassword) => knex.transaction(async trx => {
+const updateUserPassword = (username, newPassword) => knex.transaction(async trx => {
   const updatedNum = await trx('t_user')
     .where('name', '=', username)
-    .andWhere('password', '=', oldPassword)
     .update({
       password: newPassword
     });
 
   if (updatedNum === 0) {
-    throw new Error(`不存在用户名为 ${username} 且密码为 ${oldPassword} 的用户.`);
+    throw new Error(`不存在用户名为 ${username} 的用户.`);
   }
 
   return updatedNum;
@@ -64,19 +62,14 @@ const resetUserPassword = username => knex.transaction(async trx => {
  * 删除用户
  * @param {String} username 用户名
  */
-const deleteUser = username => knex.transaction(async trx => {
-  const deletedNum = await trx('t_user')
-    .where('name', '=', username)
-    .del();
+const deleteUsers = usernames => knex.transaction(trx => trx('t_user')
+  .where('name', 'in', usernames)
+  .del());
 
-  if (deletedNum === 0) {
-    throw new Error(`不存在用户名为 ${username} 的用户.`);
-  }
-
-  return deletedNum;
-});
-
+const getUsers = () => knex('t_user')
+  .select('name', 'group')
+  .whereNot('name', '=', 'admin')
 
 module.exports = {
-  createUser, updateUserPassword, resetUserPassword, deleteUser
+  createUser, updateUserPassword, resetUserPassword, deleteUsers, getUsers
 };
