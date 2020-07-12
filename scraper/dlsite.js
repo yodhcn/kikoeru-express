@@ -1,5 +1,4 @@
 const cheerio = require('cheerio'); // 解析器
-
 const axios = require('./axios'); // 数据请求
 const { hashNameIntoInt, hasLetter } = require('./utils');
 const scrapeWorkMetadataFromHVDB = require('./hvdb');
@@ -14,7 +13,7 @@ const scrapeWorkStaticMetadata = async (id, language) => {
   const url = `https://www.dlsite.com/maniax/work/=/product_id/RJ${rjcode}.html`;
 
   let COOKIE_LOCALE, AGE_RATINGS, GENRE, VA, RELEASE, SERIES, WORK_FORMAT;
-  switch(language) {
+  switch (language) {
     case 'ja-jp':
       COOKIE_LOCALE = 'locale=ja-jp'
       AGE_RATINGS = '年齢指定';
@@ -82,7 +81,7 @@ const scrapeWorkStaticMetadata = async (id, language) => {
    
     const workFormatText = workFormatElement.text();
     if (workFormatText) {
-      switch(language) {
+      switch (language) {
         case 'ja-jp':
           if (workFormatText.indexOf('ボイス・ASMR') === -1) {
             throw new Error(`[RJ${rjcode}] 不是音声类型的作品.`);
@@ -147,7 +146,7 @@ const scrapeWorkStaticMetadata = async (id, language) => {
         return $(this).text() === AGE_RATINGS;
       }).parent().children('td');
     const ageRatingsText = ageRatingsElement.text();
-    switch(language) {
+    switch (language) {
       case 'ja-jp':
         if (ageRatingsText.indexOf('全年齢') !== -1) {
           work.age_ratings = 'G'
@@ -317,7 +316,7 @@ const scrapeAllTags = async language => {
   const url = 'https://www.dlsite.com/maniax/fs';
   
   let COOKIE_LOCALE;
-  switch(language) {
+  switch (language) {
     case 'ja-jp':
       COOKIE_LOCALE = 'locale=ja-jp'
       break;
