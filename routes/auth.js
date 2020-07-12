@@ -3,14 +3,13 @@ const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator'); // 后端校验
 const express = require('express');
 const db = require('../database');
-const { getConfig } = require('../config');
-
-const config = getConfig();
-const router = express.Router();
+const { config } = require('../config');
 
 const signtoken = (obj) => jwt.sign(obj, config.jwtsecret, { expiresIn: config.expiresIn });
 
 const cmd5 = str => md5(str + config.md5secret);
+
+const router = express.Router();
 
 // 用户登录
 router.post('/auth/me', [
@@ -61,7 +60,6 @@ router.get('/auth/me', (req, res, next) => {
     
   res.send({ isUsingAuth: config.auth, user });
 });
-
 
 
 module.exports = router;

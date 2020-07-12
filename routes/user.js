@@ -2,12 +2,11 @@ const md5 = require('md5');
 const { check, validationResult } = require('express-validator'); // 后端校验
 const express = require('express');
 const db = require('../database');
-const { getConfig } = require('../config');
-
-const config = getConfig();
-const router = express.Router();
+const { config } = require('../config');
 
 const cmd5 = str => md5(str + config.md5secret);
+
+const router = express.Router();
 
 // 创建一个新用户 (仅 admin 账号拥有权限)
 router.post('/user/user', [

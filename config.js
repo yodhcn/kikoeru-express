@@ -7,6 +7,8 @@ const configPath = path.join(rootDir, 'config', 'config.json'); // 配置文件�
 const coverFolderDir = path.join(rootDir, 'covers');
 const sqliteFolderDir = path.join(rootDir, 'sqlite');
 
+let config = null;
+
 const defaultConfig = {
   maxParallelism: 16,
   rootFolders: [
@@ -32,11 +34,11 @@ const defaultConfig = {
 
 const initConfig = () => fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, "\t"));
 
-const getConfig = () => JSON.parse(fs.readFileSync(configPath));
+// const getConfig = () => JSON.parse(fs.readFileSync(configPath));
 
-const setConfig = config => {
-  const oldConfig = getConfig();
-  fs.writeFileSync(configPath, JSON.stringify(Object.assign(oldConfig, config), null, "\t"))
+const setConfig = newConfig => {
+  config = Object.assign(config, newConfig);
+  fs.writeFileSync(configPath, JSON.stringify(config, null, "\t"));
 };
 
 const init = () => {
@@ -44,7 +46,7 @@ const init = () => {
     try {
       fs.mkdirSync(sqliteFolderDir, { recursive: true });
     } catch (err) {
-      console.error(` ! 在创建存放数据库文件的文件夹时出错: ${err.message}`);
+      throw new Error(`在创建存放数据库文件的文件夹时出错: ${err.message}`);
     }
   }
 
@@ -52,7 +54,7 @@ const init = () => {
     try {
       fs.mkdirSync(coverFolderDir, { recursive: true });
     } catch (err) {
-      console.error(` ! 在创建存放音声封面的文件夹时出错: ${err.message}`);
+      throw new Error(`在创建存放音声封面的文件夹时出错: ${err.message}`);
     }
   }
 
@@ -62,31 +64,34 @@ const init = () => {
       try {
         fs.mkdirSync(configFolderDir, { recursive: true });
       } catch (err) {
-        console.error(` ! 在创建存放配置文件的文件夹时出错: ${err.message}`);
+        throw new Error(`在创建存放配置文件的文件夹时出错: ${err.message}`);
       }
     }
 
     try {
       initConfig();
     } catch (err) {
-      console.error(` ! 在初始化配置文件时出错: ${err.message}`);
+      throw new Error(`在初始化配置文件时出错: ${err.message}`);
     } 
+  }
+  
+  if (!config) {
+    try {
+      config = JSON.parse(fs.readFileSync(configPath));
+    } catch (err) {
+      throw new Error(`在解析 config.json 时出错: ${err.message}`);
+    }
   }
 };
 
-init();
-
-// setConfig({
-//   rootFolders: [
-//     {
-//       name: '多对多',
-//       path: 'F:/音声/LRC汉化'
-//     }
-//   ]
-// })
+try {
+  init();
+} catch (err) {
+  console.error(err);
+}
 
 
 module.exports = {
-  coverFolderDir, sqliteFolderDir,
-  setConfig, getConfig
+  coverFolderDir, sqliteFolderDir, config,
+  setConfig
 };

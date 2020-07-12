@@ -3,9 +3,8 @@ const jschardet = require("jschardet"); // 检测文本编码
 const iconv = require('iconv-lite'); // 文本解码
 const express = require('express');
 const knex = require('../database/connect');
-const { coverFolderDir, getConfig } = require('../config');
+const { coverFolderDir, config } = require('../config');
 
-const config = getConfig();
 const router = express.Router();
 
 router.get('/file/cover/:id', (req, res, next) => {
@@ -42,7 +41,6 @@ router.get('/file/stream/:id/:index', (req, res, next) => {
       }
     });
 });
-
 
 router.get('/file/lyric/:id/:index', (req, res, next) => {
   knex('t_work')

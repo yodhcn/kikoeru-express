@@ -1,7 +1,7 @@
+const _ = require('lodash');
 const express = require('express');
-const { getConfig } = require('../config');
+const { config, setConfig } = require('../config');
 
-const config = getConfig();
 const router = express.Router();
 
 // 更新配置文件
@@ -22,10 +22,10 @@ router.post('/config', (req, res, next) => {
 router.get('/config', (req, res, next) => {
   if (!config.auth || req.user.name === 'admin') {
     try {
-      const config = getConfig();
-      delete config.md5secret;
-      delete config.jwtsecret;
-      res.send({ config });
+      const configClone = _.cloneDeep(config);
+      delete configClone.md5secret;
+      delete configClone.jwtsecret;
+      res.send({ config: configClone });
     } catch(err) {
       next(err);
     }

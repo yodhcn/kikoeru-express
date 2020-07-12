@@ -1,10 +1,8 @@
 const express = require('express');
 const db = require('../database');
-const { getConfig } = require('../config');
+const { config } = require('../config');
 
 const PAGE_SIZE = 12;
-const config = getConfig();
-const router = express.Router();
 
 const addMetadataForWorks = (username, works) => {
   const promises = [];
@@ -19,6 +17,8 @@ const addMetadataForWorks = (username, works) => {
 
   return Promise.all(promises);
 };
+
+const router = express.Router();
 
 // 获取音声元数据
 router.get('/work/work/:id', (req, res, next) => {

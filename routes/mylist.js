@@ -1,9 +1,8 @@
 const { check, validationResult } = require('express-validator'); // 后端校验
 const express = require('express');
 const db = require('../database');
-const { getConfig } = require('../config');
+const { config } = require('../config');
 
-const config = getConfig();
 const router = express.Router();
 
 router.post('/mylist/update_mylist', [
