@@ -24,7 +24,6 @@ axios.interceptors.request.use(function (axiosConfig) {
 });
 
 const retryGet = async (url, axiosConfig) => {
-  // 默认 retry 参数
   const defaultLimit = config.retry || 5;
   const defaultRetryDelay = config.retryDelay || 2000;
   let defaultTimeout = 10000; 
