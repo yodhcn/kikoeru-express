@@ -2,8 +2,6 @@ const express = require('express');
 const db = require('../database');
 const { config } = require('../config');
 
-const PAGE_SIZE = 12;
-
 const addMetadataForWorks = (username, works) => {
   const promises = [];
   for (let i=0; i<works.length; i++) {
@@ -43,7 +41,7 @@ router.get('/work/works', async (req, res, next) => {
   const currentPage = parseInt(req.query.page) || 1;
   const order_by = req.query.order_by || 'release';
   const sort = req.query.sort || 'desc';
-  const offset = (currentPage - 1) * PAGE_SIZE;
+  const offset = (currentPage - 1) * config.pageSize;
   
   try {
     const query = () => db.work.worksFilter(
@@ -51,14 +49,14 @@ router.get('/work/works', async (req, res, next) => {
       releaseTerm, ageCategory
     );
     const countRes = await query().count('* as count').first();
-    const works = await query().offset(offset).limit(PAGE_SIZE).orderBy(order_by, sort);
+    const works = await query().offset(offset).limit(config.pageSize).orderBy(order_by, sort);
     await addMetadataForWorks(username, works);
 
     res.send({
       works,
       pagination: {
         currentPage,
-        pageSize: PAGE_SIZE,
+        pageSize: config.pageSize,
         totalCount: countRes.count
       }
     });
@@ -78,7 +76,7 @@ router.get('/work/works/search/:keyword?', async (req, res, next) => {
   const currentPage = parseInt(req.query.page) || 1;
   const order_by = req.query.order_by || 'release';
   const sort = req.query.sort || 'desc';
-  const offset = (currentPage - 1) * PAGE_SIZE;
+  const offset = (currentPage - 1) * config.pageSize;
   
   try {
     const query = () => db.work.worksFilter(
@@ -86,14 +84,14 @@ router.get('/work/works/search/:keyword?', async (req, res, next) => {
       releaseTerm, ageCategory
     );
     const countRes = await query().count('id as count').first();
-    const works = await query().offset(offset).limit(PAGE_SIZE).orderBy(order_by, sort);
+    const works = await query().offset(offset).limit(config.pageSize).orderBy(order_by, sort);
     await addMetadataForWorks(username, works);
 
     res.send({
       works,
       pagination: {
         currentPage,
-        pageSize: PAGE_SIZE,
+        pageSize: config.pageSize,
         totalCount: countRes.count
       }
     });
@@ -112,7 +110,7 @@ router.get('/work/works/:field/:id', async (req, res, next) => {
   const currentPage = parseInt(req.query.page) || 1;
   const order_by = req.query.order_by || 'release';
   const sort = req.query.sort || 'desc';
-  const offset = (currentPage - 1) * PAGE_SIZE;
+  const offset = (currentPage - 1) * config.pageSize;
   
   if (['circle', 'series', 'va', 'user_tag', 'dlsite_tag'].indexOf(req.params.field) === -1) {
     next();
@@ -136,14 +134,14 @@ router.get('/work/works/:field/:id', async (req, res, next) => {
         releaseTerm, ageCategory
       );
       const countRes = await query().count('* as count').first();
-      const works = await query().offset(offset).limit(PAGE_SIZE).orderBy(order_by, sort);
+      const works = await query().offset(offset).limit(config.pageSize).orderBy(order_by, sort);
       await addMetadataForWorks(username, works);
 
       res.send({
         works,
         pagination: {
           currentPage,
-          pageSize: PAGE_SIZE,
+          pageSize: config.pageSize,
           totalCount: countRes.count
         }
       });

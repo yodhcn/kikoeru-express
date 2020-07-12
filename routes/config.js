@@ -8,7 +8,10 @@ const router = express.Router();
 router.post('/config', (req, res, next) => {
   if (!config.auth || req.user.name === 'admin') {
     try {
-      setConfig(req.body.config);
+      const configClone = _.cloneDeep(req.body.config);
+      delete configClone.md5secret;
+      delete configClone.jwtsecret;
+      setConfig(configClone);
       res.send({ message: '保存成功.' })
     } catch(err) {
       next(err);

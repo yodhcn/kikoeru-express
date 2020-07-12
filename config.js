@@ -21,7 +21,7 @@ const defaultConfig = {
   md5secret: stringRandom(14),
   jwtsecret: stringRandom(14),
   expiresIn: 2592000,
-  scannerMaxRecursionDepth: 2,
+  maxRecursionDepth: 2,
   pageSize: 12,
   tagLanguage: 'zh-cn',
   retry: 5,
@@ -34,10 +34,15 @@ const defaultConfig = {
 
 const initConfig = () => fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, "\t"));
 
-// const getConfig = () => JSON.parse(fs.readFileSync(configPath));
-
 const setConfig = newConfig => {
-  config = Object.assign(config, newConfig);
+  // 更新 config  
+  for(let key in config) {
+    if (newConfig[key]) {
+      config[key] = newConfig[key];
+    }
+  }
+
+  // 保存 config
   fs.writeFileSync(configPath, JSON.stringify(config, null, "\t"));
 };
 
