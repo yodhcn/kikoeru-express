@@ -5,9 +5,7 @@ const fileRoutes = require('./routes/file');
 const mylistRoutes = require('./routes/mylist');
 const userRoutes = require('./routes/user');
 const workRoutes = require('./routes/work');
-const { getConfig } = require('./config');
-
-const config = getConfig();
+const { config } = require('./config');
 
 /**
  * Get token from header or query string.
